@@ -1,19 +1,14 @@
 import pandas as pd
 import numpy as np
 import re
-from collections import Counter, defaultdict
-import sklearn
+from collections import defaultdict
 from sklearn.feature_extraction.text import TfidfVectorizer
 from textblob import TextBlob
 import numpy as np
 import textwrap
 
-def load_disneyland_reviews(url: str, delimiter: str = '|', encoding: str = 'utf-8') -> pd.DataFrame:
-    df = pd.read_csv(url, sep=delimiter, encoding=encoding, on_bad_lines='skip', header=0)
-    return df
-
-url = "https://huggingface.co/spaces/zoujane/Disney-itinerary/blob/main/DisneylandReviews_CA_tags_pipe.csv"
-df_CA = load_disneyland_reviews(url)
+file_path = "/Users/lianzou/Desktop/Learning Everything/Disney-itinerary/data/DisneylandReviews_CA_tags.csv"
+df_CA = pd.read_csv(file_path, encoding="ISO-8859-1")
 
 def circular_month_diff(m1, m2):
     return min(abs(m1 - m2), 12 - abs(m1 - m2))
@@ -73,71 +68,71 @@ weights = {
 }
 
 CATEGORY_KEYWORDS = {
-    "🎢 Attractions": [
+    "### 🎢 Attractions": [
         "ride", "roller coaster", "mountain", "queue", "wait", "line", "fastpass", "genie+", 
         "lightning lane", "standby", "haunted", "pirates", "indiana", "splash", "space mountain", 
         "matterhorn", "jungle cruise", "buzz lightyear", "astro blaster", "small world", 
         "tea cups", "peter pan", "thunder mountain", "radiator springs", "soarin", "incredicoaster", 
         "web slingers", "rise of the resistance", "galaxy's edge"
     ],
-    "👧 For Kids": [
+    "### 👧 For Kids": [
         "toddler", "kids", "children", "daughter", "son", "baby", "stroller", "character dining", 
         "bibbidi", "boutique", "meet and greet", "princess", "storybook", "costume", "tea cups", 
         "pixie dust", "play area", "car toon spin", "gadget go coaster", "disney junior"
     ],
-    "🍽️ Food": [
+    "### 🍽️ Food": [
         "dining", "restaurant", "snack", "meal", "lunch", "dinner", "breakfast", "mobile order", 
         "blue bayou", "cafe orleans", "churro", "pretzel", "popcorn", "coke", "drink", "treat", 
         "food cart", "resy", "reservation", "dole whip", "tiki juice bar", "galactic grill", 
         "rancho del zocalo", "plaza inn", "corn dog", "mint julep"
     ],
-    "📅 Logistics": [
+    "### 📅 Logistics": [
         "reservation", "schedule", "booking", "entry", "check-in", "mobile app", "tip", "plan", 
         "itinerary", "open", "closing", "rope drop", "magic morning", "early entry", "arrival", 
         "navigation", "wait time", "timing", "parade time", "fireworks", "map", "fastpass", 
         "genie", "parking", "tram", "transportation", "security", "bag check"
     ],
-    "🧼 Cleanliness": [
+    "### 🧼 Cleanliness": [
         "clean", "dirty", "restroom", "bathroom", "trash", "overflowing", "smell", "sanitary", 
         "cleaning", "janitor", "mess", "filthy", "maintenance", "repair", "broken"
     ],
-    "👨‍👩‍👧 Accessibility": [
+    "### 👨‍👩‍👧 Accessibility": [
         "wheelchair", "accessibility", "disability", "accommodation", "mobility", "scooter", 
         "ecv", "guest services", "quiet area", "sensory", "ramp", "hearing", "vision", 
         "allergy", "inclusive", "language support", "translation", "service animal", "support animal"
     ],
-    "🎆 Entertainment & Shows": [
+    "### 🎆 Entertainment & Shows": [
         "parade", "show", "fireworks", "light show", "fantasmic", "world of color", "nighttime", 
         "display", "character show", "live", "performer", "music", "projection", "castle show", 
         "soundtrack", "viewing area", "reserved viewing"
     ],
-    "🛍️ Shopping & Merchandise": [
+    "### 🛍️ Shopping & Merchandise": [
         "gift shop", "merchandise", "souvenir", "store", "shop", "ears", "plush", "pins", 
         "collectibles", "lightsaber", "droid", "custom", "shirt", "hat", "apparel", "bubble wand"
     ],
-    "🏨 Hotels & Resort Experience": [
+    "### 🏨 Hotels & Resort Experience": [
         "hotel", "resort", "check-in", "room", "grand californian", "disneyland hotel", 
         "paradise pier", "stay", "bell service", "concierge", "housekeeping", "pool", 
         "view", "parking", "downtown disney", "proximity", "shuttle", "early entry"
     ],
-    "🎟️ Pricing & Value": [
+    "### 🎟️ Pricing & Value": [
         "price", "cost", "expensive", "overpriced", "worth it", "value", "budget", 
         "ticket", "annual pass", "magic key", "day pass", "discount", "deal", "souvenir prices"
     ],
-    "😕 Staff & Service": [
+    "### 🤝 Staff & Service": [
         "staff", "cast member", "rude", "helpful", "kind", "unfriendly", "friendly", 
         "customer service", "guest service", "attendant", "employee", "worker", 
         "complaint", "praise", "guide", "direction", "information", "host", "manager"
     ],
-    "🌦️ Weather & Environment": [
+    "### 🌦️ Weather & Environment": [
         "hot", "cold", "rain", "sun", "humid", "shade", "air conditioning", "fans", 
         "umbrella", "jacket", "weather", "temperature", "sunscreen"
     ],
-    "📸 Photo Opportunities": [
+    "### 📸 Photo Opportunities": [
         "photo", "photopass", "selfie", "picture", "spot", "backdrop", "memory maker", 
         "magic shot", "castle pic", "group photo", "pose"
     ],
-    "🧘 Comfort & Energy": [
+    "### 🧘 Comfort & Energy": [
         "rest", "tired", "break", "relax", "sit", "shade", "bench", "hydrate", 
         "refill station", "rest area", "nap", "slow pace"
     ]
@@ -172,7 +167,7 @@ def categorize_sentence(sentence, top_k=1):
                 scores[category] += 1
 
     if not scores:
-        return "🔹 Other"
+        return "### 🔹 Other"
 
     # Sort categories by match count and return as a single string
     sorted_categories = sorted(scores.items(), key=lambda x: x[1], reverse=True)
@@ -182,15 +177,15 @@ def categorize_sentence(sentence, top_k=1):
 def sentiment_icon(sentence):
     polarity = TextBlob(sentence).sentiment.polarity
     if polarity > 0.5:
-        return "😍"
+        return "\n😍"
     elif polarity > 0.2:
-        return "✅"
+        return "\n✅"
     elif polarity < -0.5:
-        return "😡"
+        return "\n😡"
     elif polarity < -0.2:
-        return "❌"
+        return "\n❌"
     else:
-        return "⚠️"
+        return "\n⚠️"
 
 def summarize_review_bullets(text, num_sentences=3, wrap_width=100):
     sentences = clean_and_tokenize(text)
@@ -208,7 +203,7 @@ def summarize_review_bullets(text, num_sentences=3, wrap_width=100):
     for sent in top_sentences:
         category = categorize_sentence(sent)
         icon = sentiment_icon(sent)
-        wrapped = textwrap.fill(f"{icon} {sent}", width=wrap_width)
+        wrapped = textwrap.fill(f"\n{icon} {sent}", width=wrap_width)
         bullets.append((category, wrapped))
 
     # Group by category
@@ -224,7 +219,7 @@ def summarize_review_bullets(text, num_sentences=3, wrap_width=100):
             output += f"{line}\n"
     return output
 
-def extract_summary_tfidf(text, num_sentences=1):
+def extract_summary_tfidf(text, num_sentences=2):
     sentences = clean_and_tokenize(text)
     if len(sentences) <= num_sentences:
         return " ".join(sentences)
